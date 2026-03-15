@@ -1,0 +1,683 @@
+{
+  "name": "Attendance System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "attendance",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "ab0e8959-a35b-484d-b18f-9bedd46890f8",
+      "name": "Webhook",
+      "webhookId": "5cf6fa32-2a9b-4f22-b6de-5a70af503fd7"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        0
+      ],
+      "id": "6760d108-caca-45b0-aaac-bfc4d2f475b4",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const groups = {};\nfor (const item of $input.all()) {\n  const row = item.json;\n  const key = `${row['Employee ID']}_${row['Date']}`;\n  if (!groups[key]) {\n    groups[key] = { employeeId: row['Employee ID'], name: row['Name'], date: row['Date'], ins: [], outs: [] };\n  }\n  if (row['Punch Status'] === 'IN') groups[key].ins.push(row['Time']);\n  else groups[key].outs.push(row['Time']);\n}\nreturn Object.values(groups).map(g => {\n  const checkIn = g.ins.sort()[0] || null;\n  const checkOut = g.outs.sort().reverse()[0] || null;\n  return { json: { employeeId: g.employeeId, name: g.name, date: g.date, checkIn, checkOut, lateFlag: checkIn >= '11:00' ? 'YES' : 'NO' }};\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "fd696afe-ea01-4745-8cbd-c509ca0802d9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "swastikanaskar4463@gmail.com",
+        "subject": "=={{ 'Attendance Warning - Strike ' + $json.newCount }}",
+        "message": "=<p>{{ $json.emailBody }}</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2048,
+        -176
+      ],
+      "id": "13edeae3-56c9-4f0f-8b28-5f23e3fdc2c9",
+      "name": "Send a message",
+      "webhookId": "eff1e843-8180-4d69-a80e-536a8346463a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Z10VTHGpeA1J27E9",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "swastikanaskar4463@gmail.com",
+          "mode": "id",
+          "__regex": "(^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)"
+        },
+        "start": "=={{ $now.startOf('day').plus({hours: 17}).toISO() }}",
+        "end": "=={{ $now.startOf('day').plus({hours: 17, minutes: 30}).toISO() }}",
+        "additionalFields": {
+          "summary": "=={{ 'Attendance Warning - ' + $json.name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1536,
+        208
+      ],
+      "id": "4d74f42a-46bc-4537-a5bd-b6cb9276d271",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "sIsZvgMl1HWvcpF3",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1wI7K5lXNYIZ98Q5cpDzvQFAzyAzi4FFFQawyqpN3i0E/edit?gid=0#gid=0",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Daily Records"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Employee ID": "={{ $json.employeeId }}",
+            "Name": "={{ $json.name }}",
+            "Date": "={{ $json.date }}",
+            "Check-in": "={{ $json.checkIn }}",
+            "Check-out": "={{ $json.checkOut }}",
+            "Late Flag": "={{ $json.lateFlag }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check-in",
+              "displayName": "Check-in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check-out",
+              "displayName": "Check-out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Late Flag",
+              "displayName": "Late Flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        0
+      ],
+      "id": "b90a628c-1c51-4a1b-9b4e-f7079a0aad20",
+      "name": "Write Daily Records",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sLZRYCQSOqT3On3P",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "24b75e16-b1ab-434a-b6a7-3588ff68547e",
+              "leftValue": "={{ $json.lateFlag }}",
+              "rightValue": "YES",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "1f8ea138-eb7b-4f7d-a9e2-d38dbf642ea2",
+      "name": "Late check"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1wI7K5lXNYIZ98Q5cpDzvQFAzyAzi4FFFQawyqpN3i0E/edit?gid=521669860#gid=521669860",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Monthly Counter",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Employee ID",
+              "lookupValue": "={{ $json.employeeId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        -96
+      ],
+      "id": "5c974bc3-8f56-4174-9464-8ee46bff6d8f",
+      "name": "Read monthly counter",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sLZRYCQSOqT3On3P",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nconst prevCount = parseInt(prev['Monthly Late Count'] || '0');\nconst newCount = prevCount + 1;\nconst today = new Date().toISOString().split('T')[0];\nreturn [{ json: { \n  employeeId: prev['Employee ID'] || $('IF').first().json.employeeId,\n  name: prev['Name'] || $('IF').first().json.name,\n  newCount, \n  today \n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        -96
+      ],
+      "id": "36b0560c-3bb1-4ca1-a9e5-c2a42853e6d2",
+      "name": "Calculate strike"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1wI7K5lXNYIZ98Q5cpDzvQFAzyAzi4FFFQawyqpN3i0E/edit?gid=521669860#gid=521669860",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Monthly Counter",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Employee ID": "={{ $json.newCount }}",
+            "Name": "={{ $json.newCount }}",
+            "Monthly Late Count": "={{ $json.newCount }}",
+            "Last Warning Date": "={{ $json.today }}",
+            "Month-Year": "current month"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Monthly Late Count",
+              "displayName": "Monthly Late Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Warning Date",
+              "displayName": "Last Warning Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Month-Year",
+              "displayName": "Month-Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1216,
+        -96
+      ],
+      "id": "0cc82e51-e516-4438-b4a9-2ab7cb2be181",
+      "name": "Update counter",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sLZRYCQSOqT3On3P",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.newCount }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "9d57ea62-14f7-4890-89da-b4d6ab7b2181"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b1611526-1805-45a3-8bc1-a7f72ef651bf",
+                    "leftValue": "={{ $json.newCount }}",
+                    "rightValue": "2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ce046c98-b838-4d0e-811b-db59c785d8fc",
+                    "leftValue": "={{ $json.newCount }}",
+                    "rightValue": "3",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1424,
+        -96
+      ],
+      "id": "34872d4f-158c-4346-9088-066db6937659",
+      "name": "Which strike"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3-8b-8192\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an HR assistant. Write professional warning emails. Return subject line on first line, then body. No extra commentary.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'Write a warning email for ' + $json.name + '. This is strike ' + $json.newCount + ' of 3 for late arrivals. Strike 1=friendly reminder. Strike 2=firmer tone. Strike 3=formal, mention 5PM meeting today. Under 120 words.' }}\"\n    }\n  ],\n  \"max_tokens\": 300\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1632,
+        -176
+      ],
+      "id": "1dab2e35-7a8d-44d2-afd8-6f8a6c954d37",
+      "name": "HTTP Request(Groq AI email)",
+      "credentials": {
+        "groqApi": {
+          "id": "zDME1FMvvOSK9MXi",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "02ad7cea-c6ae-44f0-ae5d-50d794e201be",
+              "name": "emailBody",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        -176
+      ],
+      "id": "d37da8dc-c121-4ca4-bf7f-d41a9b95a7f9",
+      "name": "Extract email text"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Write Daily Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request(Groq AI email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Daily Records": {
+      "main": [
+        [
+          {
+            "node": "Late check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Late check": {
+      "main": [
+        [
+          {
+            "node": "Read monthly counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read monthly counter": {
+      "main": [
+        [
+          {
+            "node": "Calculate strike",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate strike": {
+      "main": [
+        [
+          {
+            "node": "Update counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update counter": {
+      "main": [
+        [
+          {
+            "node": "Which strike",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which strike": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request(Groq AI email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request(Groq AI email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request(Groq AI email)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request(Groq AI email)": {
+      "main": [
+        [
+          {
+            "node": "Extract email text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract email text": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f858ed7b-29ea-4303-a0ce-3b0621e82a2a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1346d8a240ada41bc802b8116f457810bfe910feb26b07d62de2559b1f2bb66d"
+  },
+  "id": "8uvebuwc5QpLh2lH",
+  "tags": []
+}
